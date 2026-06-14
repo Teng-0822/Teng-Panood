@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>FlixForge · IMDb & YouTube Link Transformer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #141414;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    /* animated gradient overlay inspired by Netflix ambiance */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(ellipse at 30% 40%, rgba(229, 9, 20, 0.08) 0%, rgba(0, 0, 0, 0.6) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* main card - glassmorphic dark theme */
+    .card {
+      max-width: 760px;
+      width: 100%;
+      background: rgba(20, 20, 30, 0.88);
+      backdrop-filter: blur(12px);
+      border-radius: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      transition: transform 0.25s ease, box-shadow 0.3s ease;
+      position: relative;
+      z-index: 2;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 30px 55px -12px rgba(0, 0, 0, 0.8);
+    }
+
+    /* header area - netflix red accent */
+    .header {
+      background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+      padding: 1.8rem 2rem;
+      color: white;
+      position: relative;
+    }
+
+    .header h1 {
+      font-weight: 800;
+      font-size: 2rem;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .header h1 .logo-icon {
+      font-size: 2rem;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+
+    .header h1 span {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(4px);
+      font-size: 0.8rem;
+      padding: 0.25rem 1rem;
+      border-radius: 40px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .subhead {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      margin-top: 0.6rem;
+      font-weight: 400;
+    }
+
+    /* mode selector - sleek pill design */
+    .mode-section {
+      padding: 1.8rem 2rem 0.8rem 2rem;
+    }
+
+    .mode-toggle {
+      display: flex;
+      gap: 0.8rem;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.4rem;
+      border-radius: 80px;
+      margin-bottom: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .mode-btn {
+      flex: 1;
+      text-align: center;
+      padding: 0.85rem 0;
+      border: none;
+      background: transparent;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-family: inherit;
+      color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      letter-spacing: -0.2px;
+    }
+
+    .mode-btn i {
+      font-style: normal;
+      font-weight: 500;
+      font-size: 1.1rem;
+    }
+
+    .mode-btn.active {
+      background: #e50914;
+      color: white;
+      box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
+      border: none;
+    }
+
+    /* input panel */
+    .action-panel {
+      padding: 1.5rem 2rem 0.8rem 2rem;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .input-wrapper {
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .url-input {
+      width: 100%;
+      padding: 1rem 1.4rem;
+      font-size: 0.95rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      background: #1f1f2a;
+      border: 1.5px solid #2c2c3a;
+      border-radius: 60px;
+      transition: all 0.2s;
+      outline: none;
+      color: #f0f0f0;
+      letter-spacing: -0.2px;
+    }
+
+    .url-input:focus {
+      border-color: #e50914;
+      box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.25);
+      background: #252530;
+    }
+
+    .url-input::placeholder {
+      color: #6b6b7a;
+      font-weight: 400;
+    }
+
+    .go-btn {
+      background: #e50914;
+      border: none;
+      padding: 0 2.2rem;
+      height: 56px;
+      border-radius: 60px;
+      font-weight: 700;
+      font-size: 1rem;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: inherit;
+      box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3);
+      letter-spacing: 0.3px;
+    }
+
+    .go-btn:hover {
+      background: #f81c27;
+      transform: scale(0.97);
+      box-shadow: 0 6px 14px rgba(229, 9, 20, 0.5);
+    }
+
+    /* instruction panel - modern clean */
+    .info-container {
+      margin: 1rem 2rem 1.6rem 2rem;
+    }
+
+    .instruction-card {
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(8px);
+      border-radius: 1.5rem;
+      padding: 1.3rem 1.6rem;
+      transition: all 0.2s;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .instruction-card.play-bg {
+      border-left: 4px solid #e50914;
+      background: linear-gradient(120deg, rgba(229, 9, 20, 0.08), rgba(0, 0, 0, 0.3));
+    }
+
+    .instruction-card.download-bg {
+      border-left: 4px solid #f97316;
+      background: linear-gradient(120deg, rgba(249, 115, 22, 0.08), rgba(0, 0, 0, 0.3));
+    }
+
+    .instruction-header {
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #e0e0e0;
+    }
+
+    .instruction-body {
+      font-size: 0.9rem;
+      color: #ececec;
+      line-height: 1.5;
+    }
+
+    .instruction-body strong {
+      color: #e50914;
+      font-weight: 700;
+    }
+
+    .instruction-body code {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 0.2rem 0.5rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-family: monospace;
+      color: #ffb3b3;
+    }
+
+    .step-list {
+      margin-top: 10px;
+      list-style: none;
+    }
+
+    .step-list li {
+      margin-bottom: 10px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .step-number {
+      background: rgba(229, 9, 20, 0.6);
+      width: 22px;
+      height: 22px;
+      border-radius: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: bold;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .magic-badge {
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 40px;
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      font-family: monospace;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      border: 1px solid rgba(255,255,240,0.15);
+    }
+
+    footer {
+      padding: 1rem 2rem 1.8rem 2rem;
+      font-size: 0.7rem;
+      text-align: center;
+      color: #7e7e8c;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    @media (max-width: 580px) {
+      .input-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .go-btn {
+        justify-content: center;
+      }
+      .mode-toggle {
+        gap: 0.5rem;
+      }
+      .card {
+        border-radius: 1.5rem;
+      }
+      .header h1 {
+        font-size: 1.6rem;
+      }
+    }
+
+    /* subtle glow effect */
+    .glow-text {
+      background: linear-gradient(135deg, #fff, #e50914);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    button {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h1>
+      <span class="logo-icon">🎬</span> FlixForge
+      <span>smart transformer</span>
+    </h1>
+    <div class="subhead">Transform links instantly — cinema magic with one click</div>
+  </div>
+
+  <div class="mode-section">
+    <div class="mode-toggle" id="modeToggle">
+      <button id="playModeBtn" class="mode-btn active">
+        <i>🎥</i> Play on IMDb
+      </button>
+      <button id="downloadModeBtn" class="mode-btn">
+        <i>⬇️</i> Download from YouTube
+      </button>
+    </div>
+  </div>
+
+  <div class="action-panel">
+    <div class="input-group">
+      <div class="input-wrapper">
+        <input type="text" id="urlInput" class="url-input" placeholder="Paste full link here... (IMDb or YouTube)" autocomplete="off">
+      </div>
+      <button id="goButton" class="go-btn">▶ Launch &nbsp;→</button>
+    </div>
+  </div>
+
+  <div class="info-container" id="instructionContainer">
+    <!-- dynamic content (no hardcoded example links) -->
+  </div>
+
+  <footer>
+    ⚡ smart injection: <strong style="color:#e50914;">www.playimdb.com</strong> &nbsp;|&nbsp; <strong style="color:#f97316;">www.ssyoutube.com</strong>
+  </footer>
+</div>
+
+<script>
+  // DOM Elements
+  const playModeBtn = document.getElementById('playModeBtn');
+  const downloadModeBtn = document.getElementById('downloadModeBtn');
+  const urlInput = document.getElementById('urlInput');
+  const goButton = document.getElementById('goButton');
+  const instructionContainer = document.getElementById('instructionContainer');
+
+  // state: 'imdb' for play mode, 'youtube' for download mode
+  let currentMode = 'imdb';   // imdb = play, youtube = download
+
+  // ---------- Helper: show floating toast (Netflix style) ----------
+  function showToast(message, isError = false) {
+    const existingToast = document.querySelector('.flix-toast');
+    if (existingToast) existingToast.remove();
+    
+    const toast = document.createElement('div');
+    toast.className = 'flix-toast';
+    toast.textContent = message;
+    toast.style.position = 'fixed';
+    toast.style.bottom = '30px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.backgroundColor = isError ? '#b20710' : '#141414';
+    toast.style.color = '#fff';
+    toast.style.padding = '12px 28px';
+    toast.style.borderRadius = '50px';
+    toast.style.fontSize = '0.85rem';
+    toast.style.fontWeight = '500';
+    toast.style.zIndex = '9999';
+    toast.style.boxShadow = '0 8px 20px rgba(0,0,0,0.5)';
+    toast.style.backdropFilter = 'blur(8px)';
+    toast.style.border = '1px solid rgba(255,255,255,0.2)';
+    toast.style.fontFamily = 'inherit';
+    toast.style.letterSpacing = '0.2px';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.2s';
+      setTimeout(() => toast.remove(), 250);
+    }, 2300);
+  }
+
+  // ---------- Transform logic: insert "play" or "ss" directly after "www." (no extra dot) ----------
+  // Expected: www.playimdb.com , www.ssyoutube.com
+  function transformLink(originalLink, mode) {
+    let rawLink = originalLink.trim();
+    if (!rawLink) return null;
+    
+    let finalUrl = rawLink;
+    if (!rawLink.startsWith('http://') && !rawLink.startsWith('https://')) {
+      finalUrl = 'https://' + rawLink;
+    }
+    
+    let urlObj;
+    try {
+      urlObj = new URL(finalUrl);
+    } catch (err) {
+      showToast('❌ Invalid URL. Please paste a full link (include https://)', true);
+      return null;
+    }
+    
+    let host = urlObj.hostname;
+    const keyword = (mode === 'imdb') ? 'play' : 'ss';
+    
+    // If host contains "www." → insert keyword right after "www." without any extra dot
+    if (host.includes('www.')) {
+      // Split at first "www." occurrence
+      const parts = host.split('www.');
+      // parts structure: ["subdomain part", "remaining after www."]
+      if (parts.length >= 2) {
+        const afterWww = parts[1];  // e.g., "imdb.com" or "youtube.com"
+        // reconstruct: prefix + 'www.' + keyword + afterWww
+        const newHost = parts[0] + 'www.' + keyword + afterWww;
+        urlObj.hostname = newHost;
+      } else {
+        // fallback safety
+        urlObj.hostname = host.replace('www.', 'www.' + keyword);
+      }
+    } 
+    else {
+      // No "www." in host: we need to add "www." + keyword + original domain
+      // example: imdb.com -> www.playimdb.com
+      urlObj.hostname = 'www.' + keyword + host;
+    }
+    
+    // Clean potential double-dots (just in case)
+    let finalHost = urlObj.hostname.replace(/\.\.+/g, '.');
+    urlObj.hostname = finalHost;
+    const modifiedUrl = urlObj.toString();
+    return modifiedUrl;
+  }
+  
+  // ---------- Process and redirect ----------
+  function handleTransformAndRedirect() {
+    const rawUrl = urlInput.value.trim();
+    if (!rawUrl) {
+      showToast('📋 Paste a link first — from IMDb or YouTube', false);
+      urlInput.focus();
+      return;
+    }
+    
+    // gentle nudge if mode mismatched (non-blocking)
+    const lowerLink = rawUrl.toLowerCase();
+    if (currentMode === 'imdb' && !lowerLink.includes('imdb.com')) {
+      showToast('🎬 IMDb mode active — paste an IMDb movie link for best results', false);
+    }
+    if (currentMode === 'youtube' && !lowerLink.includes('youtube.com') && !lowerLink.includes('youtu.be')) {
+      showToast('📺 YouTube mode active — paste a valid YouTube video URL', false);
+    }
+    
+    const transformed = transformLink(rawUrl, currentMode);
+    if (!transformed) return;
+    
+    // open in new tab (preserves the tool)
+    window.open(transformed, '_blank');
+    const modeName = (currentMode === 'imdb') ? 'play' : 'ss';
+    showToast(`✨ Transformed! Added "${modeName}" after www. → new tab opened`, false);
+    
+    // micro animation feedback
+    goButton.style.transform = 'scale(0.96)';
+    setTimeout(() => { goButton.style.transform = ''; }, 130);
+  }
+  
+  // ---------- Dynamic instruction UI (Netflix style, no raw url examples) ----------
+  function updateInstructionUI() {
+    instructionContainer.innerHTML = '';
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'instruction-card';
+    
+    if (currentMode === 'imdb') {
+      cardDiv.classList.add('play-bg');
+      cardDiv.innerHTML = `
+        <div class="instruction-header">
+          <span>🎬 PLAY MODE · CINEMA EXPERIENCE</span>
+        </div>
+        <div class="instruction-body">
+          <ul class="step-list">
+            <li><span class="step-number">1</span> Go to <strong style="color:#e50914;">IMDb.com</strong> and search for any movie or series you love.</li>
+            <li><span class="step-number">2</span> Copy the full URL from your browser's address bar.</li>
+            <li><span class="step-number">3</span> Paste the link above & press <strong style="color:#e50914;">"Launch →"</strong></li>
+          </ul>
+          <div class="magic-badge">
+            ✨ <strong>magic transform:</strong> <code>www.playimdb.com/...</code> (adds "play" right after www.)
+          </div>
+          <div style="margin-top: 10px; font-size:0.75rem; opacity:0.7;">No extra dots — pure injection → instantly ready to watch.</div>
+        </div>
+      `;
+    } 
+    else {  // youtube download mode
+      cardDiv.classList.add('download-bg');
+      cardDiv.innerHTML = `
+        <div class="instruction-header">
+          <span>📥 DOWNLOAD MODE · YT SAVER</span>
+        </div>
+        <div class="instruction-body">
+          <ul class="step-list">
+            <li><span class="step-number">1</span> Open <strong style="color:#f97316;">YouTube</strong> and go to the video you want to download.</li>
+            <li><span class="step-number">2</span> Copy the full video URL from the address bar.</li>
+            <li><span class="step-number">3</span> Paste the link and click <strong style="color:#f97316;">"Launch →"</strong></li>
+          </ul>
+          <div class="magic-badge">
+            🧩 <strong>smart redirect:</strong> <code>www.ssyoutube.com/...</code> (adds "ss" after www.)
+          </div>
+          <div style="margin-top: 10px; font-size:0.75rem; opacity:0.7;">Works with popular saving services. Open the new tab to access download options.</div>
+        </div>
+      `;
+    }
+    instructionContainer.appendChild(cardDiv);
+    
+    // adjust input placeholder according to mode
+    if (currentMode === 'imdb') {
+      urlInput.placeholder = "Paste IMDb movie link... e.g., https://www.imdb.com/title/tt0111161/";
+    } else {
+      urlInput.placeholder = "Paste YouTube video link... e.g., https://www.youtube.com/watch?v=VIDEO_ID";
+    }
+  }
+  
+  // ---------- UI active mode styling + update instruction ----------
+  function setActiveMode(mode) {
+    currentMode = mode;
+    if (mode === 'imdb') {
+      playModeBtn.classList.add('active');
+      downloadModeBtn.classList.remove('active');
+    } else {
+      downloadModeBtn.classList.add('active');
+      playModeBtn.classList.remove('active');
+    }
+    updateInstructionUI();
+    // optional user hint toast
+    if (mode === 'imdb') {
+      showToast('🎬 IMDb play mode — links become www.playimdb.com', false);
+    } else {
+      showToast('📥 YouTube download mode — links become www.ssyoutube.com', false);
+    }
+  }
+  
+  // ---------- Event binding ----------
+  playModeBtn.addEventListener('click', () => {
+    if (currentMode === 'imdb') return;
+    setActiveMode('imdb');
+  });
+  
+  downloadModeBtn.addEventListener('click', () => {
+    if (currentMode === 'youtube') return;
+    setActiveMode('youtube');
+  });
+  
+  goButton.addEventListener('click', handleTransformAndRedirect);
+  
+  urlInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTransformAndRedirect();
+    }
+  });
+  
+  // extra UX: trim whitespace on paste or blur
+  urlInput.addEventListener('paste', () => {
+    setTimeout(() => {
+      urlInput.value = urlInput.value.trim();
+    }, 5);
+  });
+  
+  // Initial render
+  setActiveMode('imdb');
+  
+  // small console signature
+  console.log('🎬 FlixForge ready — transforms: www.playimdb.com | www.ssyoutube.com');
+</script>
+</body>
+</html>
